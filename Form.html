@@ -1,0 +1,205 @@
+<div id="toast-container"></div>
+
+<div id="loading-overlay"><div class="spinner"></div></div>
+
+<div class="app">
+
+  <div class="app-header">
+    <div class="brand"><span class="logo-dot"></span>DELIVERY.ID</div>
+    <div class="subtitle">Input Data Pengiriman</div>
+  </div>
+
+  <div class="content">
+
+    <!-- SECTION 1: DATA PENGIRIMAN -->
+    <div class="card">
+      <div class="section-head">
+        <div class="icon">📦</div>
+        <h2>Data Pengiriman</h2>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Tanggal</label>
+          <input type="date" id="f-tanggal">
+        </div>
+        <div class="field">
+          <label>No STTB <span class="req">*</span></label>
+          <input type="text" id="f-noSttb" placeholder="Contoh: 08321">
+        </div>
+        <div class="field">
+          <label>No Manifest</label>
+          <input type="text" id="f-noManifest">
+        </div>
+        <div class="field">
+          <label>Jenis Pengiriman</label>
+          <select id="f-pengiriman"><option value="">Pilih jenis pengiriman</option></select>
+        </div>
+
+        <div class="field full searchable">
+          <label>Nama Customer <span class="req">*</span></label>
+          <input type="text" id="f-namaCustomer-input" placeholder="Ketik untuk mencari..." autocomplete="off">
+          <div class="searchable-list" id="f-namaCustomer-list"></div>
+        </div>
+
+        <div class="field full searchable">
+          <label>Tujuan <span class="req">*</span></label>
+          <input type="text" id="f-tujuan-input" placeholder="Ketik untuk mencari..." autocomplete="off">
+          <div class="searchable-list" id="f-tujuan-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: DIMENSI & PERHITUNGAN -->
+    <div class="card">
+      <div class="section-head">
+        <div class="icon">📐</div>
+        <h2>Dimensi &amp; Perhitungan</h2>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Jumlah Barang</label>
+          <input type="number" id="f-jumlahBarang" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Berat KG</label>
+          <input type="number" id="f-beratKg" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label>Panjang CM</label>
+          <input type="number" id="f-panjangCm" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Lebar CM</label>
+          <input type="number" id="f-lebarCm" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Tinggi CM</label>
+          <input type="number" id="f-tinggiCm" min="0" step="0.1">
+        </div>
+      </div>
+      <div class="calc-row">
+        <div class="calc-box">
+          <div class="label">M3</div>
+          <div class="value" id="calc-m3">0.0000</div>
+        </div>
+        <div class="calc-box">
+          <div class="label">KG Volume</div>
+          <div class="value" id="calc-kgVolume">0.00</div>
+        </div>
+        <div class="calc-box charge">
+          <div class="label">Chargeable KG</div>
+          <div class="value" id="calc-chargeableKg">0.00</div>
+        </div>
+      </div>
+      <div class="hint">Dihitung otomatis secara realtime dari Panjang × Lebar × Tinggi × Berat.</div>
+    </div>
+
+    <!-- SECTION 3: PENGIRIMAN & JADWAL -->
+    <div class="card">
+      <div class="section-head">
+        <div class="icon">🚢</div>
+        <h2>Kapal &amp; Jadwal</h2>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Nama Kapal</label>
+          <select id="f-namaKapal"><option value="">Pilih kapal</option></select>
+        </div>
+        <div class="field">
+          <label>Closing</label>
+          <input type="date" id="f-closing">
+        </div>
+        <div class="field">
+          <label>ETD</label>
+          <input type="date" id="f-etd">
+        </div>
+        <div class="field">
+          <label>ETA</label>
+          <input type="date" id="f-eta">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: STATUS -->
+    <div class="card">
+      <div class="section-head">
+        <div class="icon">📋</div>
+        <h2>Status Pengiriman</h2>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Serah Terima</label>
+          <select id="f-serahTerima">
+            <option value="BELUM">BELUM</option>
+            <option value="SUDAH DI TERIMA">SUDAH DI TERIMA</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Bukti Sukses</label>
+          <select id="f-buktiSukses">
+            <option value="BELUM ADA">BELUM ADA</option>
+            <option value="ADA FOTO">ADA FOTO</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Dokumen POD</label>
+          <select id="f-dokumenPod">
+            <option value="BELUM">BELUM</option>
+            <option value="LENGKAP">LENGKAP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Invoice</label>
+          <select id="f-invoice">
+            <option value="BELUM">BELUM</option>
+            <option value="SUDAH">SUDAH</option>
+            <option value="SELESAI">SELESAI</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5: PENANGGUNG JAWAB -->
+    <div class="card">
+      <div class="section-head">
+        <div class="icon">👤</div>
+        <h2>Penanggung Jawab</h2>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Admin</label>
+          <select id="f-admin"><option value="">Pilih admin</option></select>
+        </div>
+        <div class="field">
+          <label>Vendor</label>
+          <select id="f-vendor"><option value="">Pilih vendor</option></select>
+        </div>
+        <div class="field full">
+          <label>Keterangan</label>
+          <textarea id="f-keterangan" placeholder="Catatan tambahan..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="meta-card" style="display:none;">
+      <div class="section-head">
+        <div class="icon">🕒</div>
+        <h2>Info Transaksi</h2>
+      </div>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--text-muted);">
+        <div>ID: <span class="status-pill" id="meta-id">-</span></div>
+        <div>Created At: <b id="meta-created">-</b></div>
+        <div>Updated At: <b id="meta-updated">-</b></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-outline" id="btn-cari">🔍 <span class="label-text">Cari</span></button>
+    <button class="btn btn-primary" id="btn-simpan">💾 <span class="label-text">Simpan</span></button>
+    <button class="btn btn-success" id="btn-update">♻️ <span class="label-text">Update</span></button>
+    <button class="btn btn-danger-outline" id="btn-reset">✖ <span class="label-text">Reset</span></button>
+  </div>
+
+</div>

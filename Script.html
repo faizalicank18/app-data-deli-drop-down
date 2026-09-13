@@ -1,0 +1,317 @@
+<script>
+(function () {
+  'use strict';
+
+  var state = {
+    master: null,
+    selectedCustomer: null, // {id, name}
+    selectedTujuan: null,
+    isEditMode: false
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ============ Loading + Toast ============ */
+
+  function showLoading() { $('loading-overlay').classList.add('show'); }
+  function hideLoading() { $('loading-overlay').classList.remove('show'); }
+
+  function toast(message, type) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type || 'info');
+    el.textContent = message;
+    $('toast-container').appendChild(el);
+    setTimeout(function () {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-8px)';
+      el.style.transition = 'opacity .2s ease, transform .2s ease';
+      setTimeout(function () { el.remove(); }, 220);
+    }, 2800);
+  }
+
+  /* ============ Master data loading ============ */
+
+  function loadMasterData() {
+    showLoading();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        hideLoading();
+        if (!res || !res.success) {
+          toast(res && res.message ? res.message : 'Gagal memuat data master.', 'error');
+          return;
+        }
+        if (res.empty) {
+          toast('Master data belum tersedia.', 'error');
+        }
+        state.master = res;
+        populateSelect('f-pengiriman', res.pengiriman, 'Pilih jenis pengiriman');
+        populateSelect('f-namaKapal', res.kapal, 'Pilih kapal');
+        populateSelect('f-admin', res.admin, 'Pilih admin');
+        populateSelect('f-vendor', res.vendor, 'Pilih vendor');
+        setupSearchable('namaCustomer', res.customers);
+        setupSearchable('tujuan', res.tujuan);
+      })
+      .withFailureHandler(function (err) {
+        hideLoading();
+        toast('Tidak dapat terhubung ke Google Sheets. Silakan coba lagi.', 'error');
+        console.error(err);
+      })
+      .getMasterData();
+  }
+
+  function populateSelect(elId, items, placeholder) {
+    var select = $(elId);
+    var current = select.value;
+    select.innerHTML = '';
+    var opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = placeholder;
+    select.appendChild(opt0);
+    (items || []).forEach(function (item) {
+      var opt = document.createElement('option');
+      opt.value = item.name;
+      opt.textContent = item.name;
+      select.appendChild(opt);
+    });
+    if (current) select.value = current;
+  }
+
+  /* ============ Searchable dropdown (Customer / Tujuan) ============ */
+
+  function setupSearchable(key, items) {
+    var input = $('f-' + key + '-input');
+    var list = $('f-' + key + '-list');
+    items = items || [];
+
+    function render(filterText) {
+      var filtered = !filterText ? items : items.filter(function (it) {
+        return it.name.toLowerCase().indexOf(filterText.toLowerCase()) !== -1;
+      });
+      list.innerHTML = '';
+      if (filtered.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Tidak ada hasil.';
+        list.appendChild(empty);
+        return;
+      }
+      filtered.slice(0, 50).forEach(function (item) {
+        var opt = document.createElement('div');
+        opt.className = 'opt';
+        opt.textContent = item.name;
+        opt.addEventListener('click', function () {
+          input.value = item.name;
+          state[key === 'namaCustomer' ? 'selectedCustomer' : 'selectedTujuan'] = item;
+          list.classList.remove('open');
+        });
+        list.appendChild(opt);
+      });
+    }
+
+    input.addEventListener('focus', function () { render(input.value); list.classList.add('open'); });
+    input.addEventListener('input', function () { render(input.value); list.classList.add('open'); });
+    document.addEventListener('click', function (e) {
+      if (!list.contains(e.target) && e.target !== input) list.classList.remove('open');
+    });
+  }
+
+  /* ============ Realtime calculation ============ */
+
+  function recalc() {
+    var p = parseFloat($('f-panjangCm').value) || 0;
+    var l = parseFloat($('f-lebarCm').value) || 0;
+    var t = parseFloat($('f-tinggiCm').value) || 0;
+    var berat = parseFloat($('f-beratKg').value) || 0;
+
+    var m3 = (p * l * t) / 1000000;
+    var kgVolume = (p * l * t) / 4000;
+    var chargeableKg = berat > kgVolume ? berat : kgVolume;
+
+    $('calc-m3').textContent = m3.toFixed(4);
+    $('calc-kgVolume').textContent = kgVolume.toFixed(2);
+    $('calc-chargeableKg').textContent = chargeableKg.toFixed(2);
+  }
+
+  ['f-panjangCm', 'f-lebarCm', 'f-tinggiCm', 'f-beratKg'].forEach(function (id) {
+    $(id).addEventListener('input', recalc);
+  });
+
+  /* ============ Form <-> data object ============ */
+
+  function collectFormData() {
+    return {
+      tanggal: $('f-tanggal').value,
+      noSttb: $('f-noSttb').value.trim(),
+      noManifest: $('f-noManifest').value.trim(),
+      namaCustomer: $('f-namaCustomer-input').value.trim(),
+      tujuan: $('f-tujuan-input').value.trim(),
+      jumlahBarang: $('f-jumlahBarang').value,
+      beratKg: $('f-beratKg').value,
+      panjangCm: $('f-panjangCm').value,
+      lebarCm: $('f-lebarCm').value,
+      tinggiCm: $('f-tinggiCm').value,
+      namaKapal: $('f-namaKapal').value,
+      closing: $('f-closing').value,
+      etd: $('f-etd').value,
+      eta: $('f-eta').value,
+      serahTerima: $('f-serahTerima').value,
+      buktiSukses: $('f-buktiSukses').value,
+      dokumenPod: $('f-dokumenPod').value,
+      pengiriman: $('f-pengiriman').value,
+      admin: $('f-admin').value,
+      vendor: $('f-vendor').value,
+      invoice: $('f-invoice').value,
+      keterangan: $('f-keterangan').value
+    };
+  }
+
+  function fillForm(data) {
+    $('f-tanggal').value = data.tanggal || '';
+    $('f-noSttb').value = data.noSttb || '';
+    $('f-noManifest').value = data.noManifest || '';
+    $('f-namaCustomer-input').value = data.namaCustomer || '';
+    $('f-tujuan-input').value = data.tujuan || '';
+    $('f-jumlahBarang').value = data.jumlahBarang || '';
+    $('f-beratKg').value = data.beratKg || '';
+    $('f-panjangCm').value = data.panjangCm || '';
+    $('f-lebarCm').value = data.lebarCm || '';
+    $('f-tinggiCm').value = data.tinggiCm || '';
+    $('f-namaKapal').value = data.namaKapal || '';
+    $('f-closing').value = data.closing || '';
+    $('f-etd').value = data.etd || '';
+    $('f-eta').value = data.eta || '';
+    $('f-serahTerima').value = data.serahTerima || 'BELUM';
+    $('f-buktiSukses').value = data.buktiSukses || 'BELUM ADA';
+    $('f-dokumenPod').value = data.dokumenPod || 'BELUM';
+    $('f-pengiriman').value = data.pengiriman || '';
+    $('f-admin').value = data.admin || '';
+    $('f-vendor').value = data.vendor || '';
+    $('f-invoice').value = data.invoice || 'BELUM';
+    $('f-keterangan').value = data.keterangan || '';
+    recalc();
+
+    if (data.id) {
+      $('meta-card').style.display = 'block';
+      $('meta-id').textContent = data.id;
+      $('meta-created').textContent = data.createdAt || '-';
+      $('meta-updated').textContent = data.updatedAt || '-';
+      state.isEditMode = true;
+    }
+  }
+
+  function resetForm() {
+    document.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(function (el) { el.value = ''; });
+    ['f-pengiriman', 'f-namaKapal', 'f-admin', 'f-vendor'].forEach(function (id) { $(id).value = ''; });
+    $('f-serahTerima').value = 'BELUM';
+    $('f-buktiSukses').value = 'BELUM ADA';
+    $('f-dokumenPod').value = 'BELUM';
+    $('f-invoice').value = 'BELUM';
+    $('meta-card').style.display = 'none';
+    state.isEditMode = false;
+    state.selectedCustomer = null;
+    state.selectedTujuan = null;
+    recalc();
+  }
+
+  /* ============ Actions ============ */
+
+  function setButtonsDisabled(disabled) {
+    ['btn-cari', 'btn-simpan', 'btn-update', 'btn-reset'].forEach(function (id) {
+      $(id).disabled = disabled;
+    });
+  }
+
+  function handleSimpan() {
+    var data = collectFormData();
+    showLoading();
+    setButtonsDisabled(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        hideLoading();
+        setButtonsDisabled(false);
+        if (!res.success) {
+          toast(res.message || 'Gagal menyimpan data.', 'error');
+          return;
+        }
+        toast(res.message, 'success');
+        if (res.id) {
+          $('meta-card').style.display = 'block';
+          $('meta-id').textContent = res.id;
+        }
+      })
+      .withFailureHandler(function (err) {
+        hideLoading();
+        setButtonsDisabled(false);
+        toast('Terjadi kesalahan pada server.', 'error');
+        console.error(err);
+      })
+      .saveTransaction(data);
+  }
+
+  function handleUpdate() {
+    var data = collectFormData();
+    showLoading();
+    setButtonsDisabled(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        hideLoading();
+        setButtonsDisabled(false);
+        if (!res.success) {
+          toast(res.message || 'Gagal memperbarui data.', 'error');
+          return;
+        }
+        toast(res.message, 'success');
+      })
+      .withFailureHandler(function (err) {
+        hideLoading();
+        setButtonsDisabled(false);
+        toast('Terjadi kesalahan pada server.', 'error');
+        console.error(err);
+      })
+      .updateTransaction(data);
+  }
+
+  function handleCari() {
+    var noSttb = $('f-noSttb').value.trim();
+    if (!noSttb) {
+      toast('Masukkan No STTB terlebih dahulu.', 'error');
+      return;
+    }
+    showLoading();
+    setButtonsDisabled(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        hideLoading();
+        setButtonsDisabled(false);
+        if (!res.success) {
+          toast(res.message || 'No STTB tidak ditemukan.', 'error');
+          return;
+        }
+        fillForm(res.data);
+        toast('Data ditemukan.', 'success');
+      })
+      .withFailureHandler(function (err) {
+        hideLoading();
+        setButtonsDisabled(false);
+        toast('Terjadi kesalahan pada server.', 'error');
+        console.error(err);
+      })
+      .searchTransaction(noSttb);
+  }
+
+  function handleReset() {
+    resetForm();
+    toast('Form dikosongkan.', 'info');
+  }
+
+  /* ============ Init ============ */
+
+  $('btn-simpan').addEventListener('click', handleSimpan);
+  $('btn-update').addEventListener('click', handleUpdate);
+  $('btn-cari').addEventListener('click', handleCari);
+  $('btn-reset').addEventListener('click', handleReset);
+
+  document.addEventListener('DOMContentLoaded', loadMasterData);
+  loadMasterData();
+})();
+</script>
